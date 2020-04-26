@@ -1,9 +1,11 @@
 // Copyright 2018 LiuCheng. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found
 // in the LICENSE file.
+// 钱学超 2020-04-26 修改
 
 import 'package:flutter/material.dart';
 
+/// 自动缩放大小的文本框
 class FlutterAutoText extends StatefulWidget {
   /// 要显示的文字
   final String text;
@@ -16,93 +18,84 @@ class FlutterAutoText extends StatefulWidget {
   ///默认最小是6
   final double minTextSize;
 
-  ///正常的字体大小
-  ///默认值是14
-  final double textSize;
-
-  /// 正常的字体大小
-  /// 默认值是14
-  final Color textColor;
-
   /// 字体的样式
   final TextStyle textStyle;
 
-  FlutterAutoText(
-      {Key key,
-      String text,
-      this.textStyle,
-      @required this.width,
-      double minTextSize,
-      this.textColor,
-      double textSize})
-      : this.minTextSize = minTextSize ?? 6,
-        this.textSize = textSize != null
-            ? textSize
-            : textStyle != null ? textStyle.fontSize : 14,
-        this.text = text ?? '',
+  /// 构造函数
+  FlutterAutoText({Key key, @required String text, @required this.width, TextStyle textStyle, double minTextSize})
+      : minTextSize = minTextSize ?? 6,
+        text = text ?? '',
+        textStyle = textStyle ?? TextStyle(fontSize: 14),
         super(key: key);
 
   @override
   State<StatefulWidget> createState() {
-    //定义开始的text样式
-    TextStyle textFieldTextStyle =
-        textStyle ?? TextStyle(fontSize: textSize, color: textColor);
-
-    final textPainter = TextPainter(
-      textDirection: TextDirection.ltr,
-      text: TextSpan(
-        text: text,
-        style: textFieldTextStyle,
-      ),
-    );
-    textPainter.layout();
-    State state = AutoTextState(textPainter, textFieldTextStyle);
-
-    return state;
+    return AutoTextState();
   }
 }
 
-class AutoTextState extends State<FlutterAutoText>
-    with TickerProviderStateMixin {
+/// 创建控件的一个状态
+class AutoTextState extends State<FlutterAutoText> with TickerProviderStateMixin {
   final GlobalKey _autoTextKey = GlobalKey();
 
-  // double _textWidth = 0.0;
+  // 计算过后的字体大小
   double _fontSize = 0;
-  final TextPainter textPainter;
-  final TextStyle textFieldTextStyle;
-  AutoTextState(this.textPainter, this.textFieldTextStyle);
+
+  // 动画控制器
   AnimationController _controller;
+
+  // 绘制文本的主要工具
+  TextPainter _textPainter;
+
+  didUpdateWidget(FlutterAutoText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    _textPainter.text = TextSpan(
+      text: widget.text,
+      style: widget.textStyle,
+    );
+    _textPainter.layout();
+
+    _fontSize = widget.textStyle.fontSize;
+    _controller.notifyListeners();
+    _controller.reset();
+    _controller.forward();
+  }
 
   @override
   void initState() {
     super.initState();
-    _fontSize = widget.textSize;
-    _controller = new AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 200))
+
+    _textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      text: TextSpan(
+        text: widget.text,
+        style: widget.textStyle,
+      ),
+    );
+    _textPainter.layout();
+
+    _fontSize = widget.textStyle.fontSize;
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 100))
       ..addStatusListener((status) {
-        double containerWidth =
-            widget.width ?? _autoTextKey.currentContext.size.width; //始终是-2
         if (status == AnimationStatus.completed) {
           //当前没有缩放前的text宽度
-
-          var textWidth = textPainter.width;
-          var fontSize = textFieldTextStyle.fontSize;
+          var textWidth = _textPainter.width;
+          var fontSize = widget.textStyle.fontSize;
           /**
            * only text width largger than Container Width can do while
            */
-          if (textWidth > containerWidth) {
-            while (
-                textWidth > containerWidth && fontSize > widget.minTextSize) {
-              fontSize -= 0.5;
-              textPainter.text = TextSpan(
+          if (textWidth > widget.width) {
+            while (textWidth > widget.width && fontSize > widget.minTextSize) {
+              fontSize -= 0.2;
+              _textPainter.text = TextSpan(
                 text: widget.text,
-                style: textFieldTextStyle.copyWith(fontSize: fontSize),
+                style: widget.textStyle.copyWith(fontSize: fontSize),
               );
-              textPainter.layout();
-              textWidth = textPainter.width;
+              _textPainter.layout();
+              textWidth = _textPainter.width;
             }
             setState(() {
-              // _textWidth = textWidth;
               _fontSize = fontSize;
             });
           }
@@ -113,13 +106,12 @@ class AutoTextState extends State<FlutterAutoText>
 
   @override
   Widget build(BuildContext context) {
-    return new ScaleTransition(
-        scale: new CurvedAnimation(
+    /// 缩放文本大小的动画
+    return ScaleTransition(
+        scale: CurvedAnimation(
           parent: _controller,
-          curve: new Interval(0.0, 1.0, curve: Curves.easeOut),
+          curve: Interval(0.0, 1.0, curve: Curves.easeOut),
         ),
-        child: Text(widget.text,
-            key: _autoTextKey,
-            style: textFieldTextStyle.copyWith(fontSize: _fontSize)));
+        child: Text(widget.text, key: _autoTextKey, style: widget.textStyle.copyWith(fontSize: _fontSize)));
   }
 }
