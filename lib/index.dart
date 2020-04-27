@@ -1,7 +1,8 @@
 // Copyright 2018 LiuCheng. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found
 // in the LICENSE file.
-// 钱学超 2020-04-26 修改
+//
+// 钱学超 2020-04-26 修改 forked from LiuC520/flutterAutoText
 
 import 'package:flutter/material.dart';
 
@@ -103,6 +104,15 @@ class AutoTextState extends State<FlutterAutoText> with TickerProviderStateMixin
       });
     _controller.forward();
   }
+
+  @override
+  void dispose() {
+    if(_controller!=null){
+      _controller.dispose();
+    }
+    super.dispose();
+  }
+
 
   @override
   Widget build(BuildContext context) {
